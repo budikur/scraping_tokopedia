@@ -4,6 +4,7 @@ from selenium import webdriver
 import os
 import time
 dict_product_list = []
+dict_product_list_all = []
 
 def data_per_page(page,desired_product):
     driver = webdriver.Chrome(executable_path=os.path.abspath('chromedriver'))
@@ -28,17 +29,20 @@ def data_per_page(page,desired_product):
             'price': prices
         }
         dict_product_list.append(dict_product)
+        dict_product_list_all.append(dict_product)
         i+=1
     driver.close()
-    print(dict_product_list)
-    print(i)
+    # print(dict_product_list)
+    print(page,': ',i)
     if dict_product_list == []:
         print('Oops, no products found on this page')
         print('exit')
         exit()
 
-    df = pd.DataFrame(dict_product_list)
-    df.to_csv('csv_file/page-'+ str(page) +'.csv', index=False, encoding='utf-8')
+    df1 = pd.DataFrame(dict_product_list_all)
+    df2 = pd.DataFrame(dict_product_list)
+    df1.to_csv('csv_file/all_products.csv', index=False, encoding='utf-8')
+    df2.to_csv('csv_file/page-'+ str(page) +'.csv', index=False, encoding='utf-8')
     dict_product_list.clear()
     page += 1
     data_per_page(page,desired_product)
