@@ -3,81 +3,60 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 import os
 import time
+dict_product_list = []
 
-driver = webdriver.Chrome(executable_path=os.path.abspath('chromedriver'))
-driver.get('https://www.tokopedia.com/search?q=laptop&source=universe&st=product')
+def data_per_page(page,desired_product):
+    driver = webdriver.Chrome(executable_path=os.path.abspath('chromedriver'))
+    url = 'https://www.tokopedia.com/search?page=' + str(page) + '&q='+ str(desired_product) +'&source=universe&st=product'
+    driver.get(url)
+    scroll_down(driver)
+    content = driver.page_source
+    soup = BeautifulSoup(content, features="html.parser")
 
-SCROLL_PAUSE_TIME = 0.5
-driver.execute_script("window.scrollBy(0,100)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,200)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,300)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,400)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,500)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,600)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,700)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,800)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,900)","")
-time.sleep(SCROLL_PAUSE_TIME)
-driver.execute_script("window.scrollBy(0,1000)","")
-time.sleep(SCROLL_PAUSE_TIME)
+    i=1
+    for link in soup.find_all('div',class_="css-1g20a2m"):
+        products_links = link.find('a')['href']
+        products_name = link.find('div', attrs={'class': 'css-18c4yhp'}).text
+        # image = soup.find('img', attrs={'class': 'success fade'}).attrs['src']
+        images = link.find('img', attrs={'class': 'success fade'}).attrs['src']
+        prices = link.find('div', attrs={'class': 'css-rhd610'}).text
 
-# SCROLL_PAUSE_TIME = 3
-# # Get scroll height
-# last_height = driver.execute_script("return document.body.scrollHeight")
-# while True:
-#     # Scroll down to bottom
-#     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-#
-#     # Wait to load page
-#     time.sleep(SCROLL_PAUSE_TIME)
-#
-#     # Calculate new scroll height and compare with last scroll height
-#     new_height = driver.execute_script("return document.body.scrollHeight")
-#     if new_height == last_height:
-#         break
-#     last_height = new_height
-#     time.sleep(SCROLL_PAUSE_TIME)
+        dict_product = {
+            'product_link': products_links,
+            'product_name': products_name,
+            'images': images,
+            'price': prices
+        }
+        dict_product_list.append(dict_product)
+        i+=1
+    driver.close()
+    print(dict_product_list)
+    print(i)
+    if dict_product_list == []:
+        print('Oops, no products found on this page')
+        print('exit')
+        exit()
 
-products = []
-prices = []
-images = []
+    df = pd.DataFrame(dict_product_list)
+    df.to_csv('csv_file/page-'+ str(page) +'.csv', index=False, encoding='utf-8')
+    dict_product_list.clear()
+    page += 1
+    data_per_page(page,desired_product)
 
-content = driver.page_source
-# print(content)
-# THIS IS FOR CHECK THE PAGE IS SUITABLE OR NOT
-# f = open('./page1.html', 'w+')
-# f.write(content)
-# f.close()
+def scroll_down(driver):
+    SCROLL_PAUSE_TIME = 1
+    down = 100
+    for i in range(10):
+        driver.execute_script("window.scrollBy(0," +str(down)+ ")", "")
+        time.sleep(SCROLL_PAUSE_TIME)
+        down += 100
 
-# content = driver.page_source
-soup = BeautifulSoup(content, features="html.parser")
+def find_product():
+    desired_product = input("What product you want to find?")
+    return desired_product
 
-# print(soup)
-# soup = BeautifulSoup(open('./page1.html'), 'html.parser')
-i=1
-for link in soup.find_all('div',class_="css-1g20a2m"):
-    product = link.find('div', class_="css-18c4yhp")
-    print(i, product.get_text())
-    products.append(product.get_text())
-    # ===================================
-    image = link.find('img', class_="success fade")
-    print(image['src'])
-    images.append(image)
-    # ===================================
-    price = link.find('div', class_="css-rhd610")
-    print(price.get_text())
-    prices.append(price.get_text())
-    # ===================================
-    i+=1
-print(i)
-
-df = pd.DataFrame({'Product Name':products,'Price':prices,'Images':images})
-df.to_csv('tokopedia.csv',index=False,encoding='utf-8')
+if __name__ == '__main__':
+    desired_product = find_product()
+    # desired_product = 'baju bayi'
+    page = 1
+    data_per_page(page,desired_product)
